@@ -9,8 +9,7 @@ from .Locations import TGLLocation, TGLLocationData, TGL_LOCID_BASE, get_locatio
 if TYPE_CHECKING:
     from worlds._bizhawk.context import BizHawkClientContext
 
-# Everything here shamelessly adapted from Pokemon Emerald...
-# Probably a good idea to figure what I actually need...
+# Everything here shamelessly adapted from Pokemon Emerald :)
 
 #TODO: Figure this out
 EXPECTED_ROM_NAME = "TGL AP Hack"
@@ -51,7 +50,9 @@ RAM_RAPID_FIRE_LEVEL = 0x6B
 RAM_SHOT_SPEED = 0x39
 
 RAM_GAME_STATE = 0x30
+RAM_ROOM_NUMBER = 0x51
 RAM_MUSIC_ID = 0x3DD
+RAM_ENDING_FLAG = 0x1FF # usually this is 0xFF, but 0x82 in sound check and 0x8B during ending
 
 class TGLClient(BizHawkClient):
     game = "The Guardian Legend"
@@ -94,26 +95,29 @@ class TGLClient(BizHawkClient):
         # main watch loop
         try:
             # Check it's safe to receive items (probably just in game, not on title screen or save room?)
-            # - Try Music Player channel ids (0x03DD-0x3DF), should be 01 on title only
-            # - PLUS the game state bitflags (0x0030) set bit 8 (0x80) for demo mode
+            # - Music Player channel ids (0x03DD-0x3DF), should be 01 on title only
+            # - The game state bitflags (0x0030) set bit 8 (0x80) for demo mode
+            # - And there's a sound check so we need to make sure we're not in that either
             check_safety_bytes = await bizhawk.read(
                 ctx.bizhawk_ctx,
                 [
                     (RAM_GAME_STATE, 1, "RAM"),
-                    (RAM_MUSIC_ID, 1, "RAM")
+                    (RAM_MUSIC_ID, 1, "RAM"),
+                    (RAM_ENDING_FLAG, 1, "RAM")
                 ]
             )
             check_demo_byte = int.from_bytes(check_safety_bytes[0], 'little')
             check_music_id = int.from_bytes(check_safety_bytes[1], 'little')
+            check_ending_flag = int.from_bytes(check_safety_bytes[2], 'little')
 
             check_demo_bit = (check_demo_byte & (1 << 7)) >> 7
             
-            # If we're in title screen or demo mode, skip this loop
-            if (check_music_id == 1) or (check_demo_bit == 1):
+            # If we're in title screen or demo mode or sound check, skip this loop
+            if (check_music_id == 1) or (check_demo_bit == 1) or (check_ending_flag == 0x82):
                 return
             
             # Check and send game clear - Music code 0F (at 0x3DD)
-            if not ctx.finished_game and check_music_id == 0xF:
+            if (not ctx.finished_game) and (check_music_id == 0xF) and (check_ending_flag == 0x8B):
                 await ctx.send_msgs([{
                     "cmd": "StatusUpdate",
                     "status": ClientStatus.CLIENT_GOAL
@@ -134,10 +138,13 @@ class TGLClient(BizHawkClient):
             
             if num_new_items < len(ctx.items_received):
                 next_item_id = ctx.items_received[num_new_items].item
+                # remote items (including this client's Keys) always get processed
                 is_remote_item = not ctx.slot_concerns_self(ctx.items_received[num_new_items].player)
+                # location id < 0 indicates cheat console or server item, we always need to process those
+                is_special_item = ctx.items_received[num_new_items].location < 0
                 next_item_type:Tuple = divmod(next_item_id - TGL_ITEMID_BASE, 1000)
                 # Determine how to handle the item based on type:
-                if (next_item_type[0] == 1) and is_remote_item:
+                if (next_item_type[0] == 1) and (is_remote_item or is_special_item):
                     # Drop item
                     # Subweapons are 2 bits per, stored over 3 bytes - need to add 1 level if less than 3 total
                     if next_item_type[1] <= 10:
@@ -333,7 +340,7 @@ class TGLClient(BizHawkClient):
                     [(RAM_KEYS_INGAME, read_key_data[0], "RAM")]
                 )
 
-            # TODO: Send local checked locations
+            # Send local checked locations
             # Read the RAM for location checks
             read_location_flags = await bizhawk.read(
                 ctx.bizhawk_ctx,
@@ -361,10 +368,7 @@ class TGLClient(BizHawkClient):
                     if locid not in ctx.checked_locations:
                         ctx.locations_checked.add(locid)
                         await ctx.send_msgs([{"cmd": "LocationChecks", "locations": [locid]}])
-            
-            # TODO: Read game flags (Corridors cleared, game cleared)
 
-           
         except bizhawk.RequestFailedError:
             pass
 
