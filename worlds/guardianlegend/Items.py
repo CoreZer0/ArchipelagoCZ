@@ -29,6 +29,8 @@ TGL_ITEMID_BASE = 8471760000
 # NOTE: If we decide to randomize/alter those thresholds this will have to be changed
 red_lander_thresholds = [50,100,150,200,400,800,1200,1600,2400,4000,6000]
 
+balanced_rapid_fire = [10,8,6,4,2,1]
+
 item_table: Dict[str, TGLItemData] = {
     "Crescent Key":   TGLItemData("Keys", TGL_ITEMID_BASE+2000, ItemClassification.progression),
     "Hook Key":       TGLItemData("Keys", TGL_ITEMID_BASE+2001, ItemClassification.progression),
@@ -40,27 +42,27 @@ item_table: Dict[str, TGLItemData] = {
 
     # Subweapons - In-game itemID order, with offsets
     "Multibullets":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1000, ItemClassification.progression_skip_balancing,  4),
-    "Back Fire":      TGLItemData("Subweapons",  TGL_ITEMID_BASE+1001, ItemClassification.useful,  3),
+    "Back Fire":      TGLItemData("Subweapons",  TGL_ITEMID_BASE+1001, ItemClassification.useful,  4),
     "Wave Attack":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1002, ItemClassification.useful,  4),
     "Bullet Shield":  TGLItemData("Subweapons",  TGL_ITEMID_BASE+1003, ItemClassification.useful,  4),
     "Grenade":        TGLItemData("Subweapons",  TGL_ITEMID_BASE+1004, ItemClassification.useful,  4),
     "Fireball":       TGLItemData("Subweapons",  TGL_ITEMID_BASE+1005, ItemClassification.useful,  4),
     "Area Blaster":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1006, ItemClassification.useful,  4),
-    "Repeller":       TGLItemData("Subweapons",  TGL_ITEMID_BASE+1007, ItemClassification.useful,  3),
-    "Hyper Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1008, ItemClassification.useful,  3),
-    "Saber Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1009, ItemClassification.useful,  3),
-    "Cutter Laser":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1010, ItemClassification.useful,  3),
+    "Repeller":       TGLItemData("Subweapons",  TGL_ITEMID_BASE+1007, ItemClassification.useful,  4),
+    "Hyper Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1008, ItemClassification.useful,  4),
+    "Saber Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1009, ItemClassification.useful,  4),
+    "Cutter Laser":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1010, ItemClassification.useful,  4),
 
     # Filler / Non-unique
-    "Enemy Eraser":  TGLItemData("Filler",  TGL_ITEMID_BASE+1011, ItemClassification.filler,  5),
-    #"Energy Pack":   TGLItemData("Filler",  TGL_ITEMID_BASE+1012, ItemClassification.filler,  3),
+    "Enemy Eraser":  TGLItemData("Filler",  TGL_ITEMID_BASE+1011, ItemClassification.filler,  9),
+    "Energy Pack":   TGLItemData("Filler",  TGL_ITEMID_BASE+1012, ItemClassification.filler,  7),
 
     # Stats
-    "Blue Lander":     TGLItemData("Stats",  TGL_ITEMID_BASE+1013, ItemClassification.useful,                      9),
-    "Attack Up":       TGLItemData("Stats",  TGL_ITEMID_BASE+1014, ItemClassification.useful,                      3),
-    "Defense Up":      TGLItemData("Stats",  TGL_ITEMID_BASE+1015, ItemClassification.progression_skip_balancing,  8),
-    "Rapid Fire Up":   TGLItemData("Stats",  TGL_ITEMID_BASE+1016, ItemClassification.useful,                      6),
-    "Red Lander":      TGLItemData("Stats",  TGL_ITEMID_BASE+1017, ItemClassification.progression_skip_balancing,  9),
+    "Blue Lander":     TGLItemData("Stats",  TGL_ITEMID_BASE+1013, ItemClassification.progression, 10),
+    "Attack Up":       TGLItemData("Stats",  TGL_ITEMID_BASE+1014, ItemClassification.progression, 4),
+    "Defense Up":      TGLItemData("Stats",  TGL_ITEMID_BASE+1015, ItemClassification.progression, 9),
+    "Rapid Fire Up":   TGLItemData("Stats",  TGL_ITEMID_BASE+1016, ItemClassification.progression, 6),
+    "Red Lander":      TGLItemData("Stats",  TGL_ITEMID_BASE+1017, ItemClassification.progression, 10),
 
     # Drops - Not shuffled, here for reference
     #"Life Heart": TGLItemData("Filler",  TGL_ITEMID_BASE+1020, ItemClassification.filler),

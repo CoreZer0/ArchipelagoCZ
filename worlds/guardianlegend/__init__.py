@@ -60,11 +60,10 @@ class TGLWorld(World):
                 self.create_event(locname + " Cleared"))
 
     def set_rules(self):
-        set_rules(self.multiworld, self.player)
+        set_rules(self.multiworld, self.player, self.options.item_gating.value)
 
-    # TODO: Maybe do weighted EE/EP? Not important right now
     def get_filler_item_name(self) -> str:
-        return "Energy Pack"
+        return "Enemy Eraser"
 
     # If I've counted right, we shouldn't need any filler at all (for now)
     def create_items(self) -> None:
@@ -76,5 +75,5 @@ class TGLWorld(World):
         self.multiworld.itempool += item_pool
 
     def generate_output(self, output_directory: str) -> None:
-        generate_output(self.multiworld, self.player, output_directory)
+        generate_output(self.multiworld, self.player, output_directory, self.options)
     

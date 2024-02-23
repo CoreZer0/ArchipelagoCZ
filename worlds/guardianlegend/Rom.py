@@ -7,8 +7,9 @@ import Utils
 from BaseClasses import MultiWorld
 from worlds.Files import APDeltaPatch
 from settings import get_settings
-from .Items import TGL_ITEMID_BASE
+from .Items import TGL_ITEMID_BASE, balanced_rapid_fire
 from .Locations import TGL_LOCID_BASE
+from .Options import TGLOptions
 
 #TGL_ITEMID_BASE = 8471760000
 #TGL_LOCID_BASE  = 8471765000
@@ -25,7 +26,7 @@ class TGLDeltaPatch(APDeltaPatch):
     def get_source_data(cls) -> bytes:
         return get_base_rom_as_bytes()
     
-def generate_output(multiworld: MultiWorld, player: int, output_directory: str) -> None:
+def generate_output(multiworld: MultiWorld, player: int, output_directory: str, options: TGLOptions) -> None:
     base_rom = get_base_rom_as_bytes()
 
     # Currently not using a base patch, but likely will
@@ -61,45 +62,56 @@ def generate_output(multiworld: MultiWorld, player: int, output_directory: str) 
                 case 3:
                     location_rom_address = 0x1ef51 + location_data[1] - 1
 
-
+                # Corridor bonus items, these are remote and not displayed in-game
+                case 4:
+                    pass
                 case _:
                     raise Exception('Invalid location ID found for The Guardian Legend.')
             
-            # Local item: can change directly
-            if location.item and location.item.player == player:
-                item_data: Tuple = divmod(get_internal_item_id(location.item.code), 1000)
+            # This should only be skipped if case 4 hit above because this is a Corridor item never shown in game
+            # - Prevents the ROM header being edited and ROM failing to load 
+            if location_rom_address != 0:
+                # Local item: can change directly
+                if location.item and location.item.player == player:
+                    item_data: Tuple = divmod(get_internal_item_id(location.item.code), 1000)
             
-                # Check whether this is a drop item or a key
-                match item_data[0]:
+                    # Check whether this is a drop item or a key
+                    match item_data[0]:
                 
-                    # Drop item
-                    case 1:
-                        _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, item_data[1])
+                        # Drop item
+                        case 1:
+                            _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, item_data[1])
                 
-                    # Key item - treat as remote item
-                    case 2:
-                        _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, AP_ITEM_CODE)
-                    case _:
-                        raise Exception('Invalid item ID found for The Guardian Legend.')
+                        # Key item - treat as remote item
+                        case 2:
+                            _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, AP_ITEM_CODE)
+                        case _:
+                            raise Exception('Invalid item ID found for The Guardian Legend.')
 
-            # APItem: Set sprite to Red Chip in-game
-            else:
-                _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, AP_ITEM_CODE)
+                # APItem: Set sprite to Red Chip in-game
+                else:
+                    _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, AP_ITEM_CODE)
 
+        # Options-based changes
+        if options.balanced_rapid_fire:
+            rapid_fire_byte = 0x87DE
+            for i in range(6):
+                _set_bytes_little_endian(base_patch_rom, rapid_fire_byte+i, 1, balanced_rapid_fire[i])
+            pass
 
-        # Write output to patch file
-        outfile_player_name = f"_P{player}"
-        outfile_player_name += f"_{multiworld.get_file_safe_player_name(player).replace(' ', '_')}" \
-            if multiworld.player_name[player] != f"Player{player}" else ""
-        output_path = os.path.join(output_directory, f"AP_{multiworld.seed_name}{outfile_player_name}.nes")
+    # Write output to patch file
+    outfile_player_name = f"_P{player}"
+    outfile_player_name += f"_{multiworld.get_file_safe_player_name(player).replace(' ', '_')}" \
+        if multiworld.player_name[player] != f"Player{player}" else ""
+    output_path = os.path.join(output_directory, f"AP_{multiworld.seed_name}{outfile_player_name}.nes")
 
-        with open(output_path, "wb") as outfile:
-            outfile.write(base_patch_rom)
-        patch = TGLDeltaPatch(os.path.splitext(output_path)[0] + ".aptgl", player=player,
-                              player_name=multiworld.player_name[player], patched_path=output_path)
-        patch.write()
+    with open(output_path, "wb") as outfile:
+        outfile.write(base_patch_rom)
+    patch = TGLDeltaPatch(os.path.splitext(output_path)[0] + ".aptgl", player=player,
+                          player_name=multiworld.player_name[player], patched_path=output_path)
+    patch.write()
 
-        os.unlink(output_path)
+    os.unlink(output_path)
 
 
 def _set_bytes_little_endian(byte_array: bytearray, address: int, size: int, value: int) -> None:

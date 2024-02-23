@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Set, Dict, Tuple
 from NetUtils import ClientStatus
 import worlds._bizhawk as bizhawk
 from worlds._bizhawk.client import BizHawkClient
-from .Items import TGLItem, TGLItemData, item_table, event_item_table, red_lander_thresholds, TGL_ITEMID_BASE
+from .Items import TGLItem, TGLItemData, red_lander_thresholds, balanced_rapid_fire, TGL_ITEMID_BASE
 from .Locations import TGLLocation, TGLLocationData, TGL_LOCID_BASE, get_locationcode_by_bitflag
 
 if TYPE_CHECKING:
@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 #TODO: Figure this out
 EXPECTED_ROM_NAME = "TGL AP Hack"
 ROM_CHIP_MAX = 0x87E6
+ROM_RAPID_FIRE_LEVELS = 0x87CE
 
 # RAM Address list
 
@@ -133,7 +134,7 @@ class TGLClient(BizHawkClient):
             if read_item_count is None:
                 raise Exception("Failed to read stored item count.")
             
-            num_new_items = int.from_bytes(read_item_count[0], "little")
+            num_new_items = int.from_bytes(read_item_count[0], 'little')
             granted_item = bool(False)
             
             if num_new_items < len(ctx.items_received):
@@ -141,7 +142,9 @@ class TGLClient(BizHawkClient):
                 # remote items (including this client's Keys) always get processed
                 is_remote_item = not ctx.slot_concerns_self(ctx.items_received[num_new_items].player)
                 # location id < 0 indicates cheat console or server item, we always need to process those
-                is_special_item = ctx.items_received[num_new_items].location < 0
+                # location id in 4000s indicated bonus corridor item that also needs to be handled
+                item_loc = ctx.items_received[num_new_items].location
+                is_special_item = (item_loc < 0) or (item_loc - TGL_LOCID_BASE >= 4000) 
                 next_item_type:Tuple = divmod(next_item_id - TGL_ITEMID_BASE, 1000)
                 # Determine how to handle the item based on type:
                 if (next_item_type[0] == 1) and (is_remote_item or is_special_item):
@@ -253,7 +256,11 @@ class TGLClient(BizHawkClient):
                         stat_level = int.from_bytes(read_item_bytes[0], 'little')
                         if stat_level < 5:
                             stat_level += 1
-                            shot_speed = [12,5,4,3,2,1][stat_level]
+                            read_rapid_fire_level = await bizhawk.read(
+                                ctx.bizhawk_ctx,
+                                [(ROM_RAPID_FIRE_LEVELS+stat_level, 1, "PRG ROM")]
+                            )
+                            shot_speed = int.from_bytes(read_rapid_fire_level[0], 'little')
                             granted_item = await bizhawk.guarded_write(
                                 ctx.bizhawk_ctx,
                                 [
@@ -289,7 +296,7 @@ class TGLClient(BizHawkClient):
                             granted_item = bool(True)
                         
                     else:
-                        raise Exception('Invalid item number ID sent to The Guardian Legend.')
+                        raise Exception("Invalid item number ID sent to The Guardian Legend.")
                 
                 # For non-key items, these don't need to be received from server so just note it and skip it    
                 elif (next_item_type[0] == 1) and not is_remote_item:
@@ -314,9 +321,9 @@ class TGLClient(BizHawkClient):
                                 [(RAM_KEYS_RECEIVED, read_key_data[0], "RAM")]
                             )
                         else:
-                            raise Exception('Invalid Key flag sent to The Guardian Legend.')
+                            raise Exception("Invalid Key flag sent to The Guardian Legend.")
                 else:
-                        raise Exception('Invalid item type ID sent to The Guardian Legend.')
+                        raise Exception("Invalid item type ID sent to The Guardian Legend.")
                 
             # if we managed to make a successful write, increment the item counter
             if granted_item:
@@ -367,7 +374,8 @@ class TGLClient(BizHawkClient):
                     locid = get_locationcode_by_bitflag((locbits[0] + 9, 1 << locbits[1]))
                     if locid not in ctx.checked_locations:
                         ctx.locations_checked.add(locid)
-                        await ctx.send_msgs([{"cmd": "LocationChecks", "locations": [locid]}])
+                        ctx.locations_checked.add(locid+1000)
+                        await ctx.send_msgs([{"cmd": "LocationChecks", "locations": [locid, locid+1000]}])
 
         except bizhawk.RequestFailedError:
             pass
