@@ -41,7 +41,7 @@ item_table: Dict[str, TGLItemData] = {
     "Rectangle Key":  TGLItemData("Keys", TGL_ITEMID_BASE+2006, ItemClassification.progression),
 
     # Subweapons - In-game itemID order, with offsets
-    "Multibullets":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1000, ItemClassification.progression_skip_balancing,  4),
+    "Multibullets":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1000, ItemClassification.useful,  4),
     "Back Fire":      TGLItemData("Subweapons",  TGL_ITEMID_BASE+1001, ItemClassification.useful,  4),
     "Wave Attack":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1002, ItemClassification.useful,  4),
     "Bullet Shield":  TGLItemData("Subweapons",  TGL_ITEMID_BASE+1003, ItemClassification.useful,  4),

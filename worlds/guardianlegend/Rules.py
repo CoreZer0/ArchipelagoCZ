@@ -128,7 +128,8 @@ def set_rules(multiworld: MultiWorld, player: int, gating: int):
 
     # Corridor 6 has a chip spending requirement
     # To get around checking ALL subweapons, we just check for one Multibullet.
-    add_rule(multiworld.get_location("Corridor 6 (X16 Y11)", player), lambda state: has_multibullets(state, player))
+    # NOTE: Client changed to open all Corridors, rule is not needed
+    #add_rule(multiworld.get_location("A6 Corridor 6 (X16 Y11)", player), lambda state: has_multibullets(state, player))
 
     # Corridor 21 requires Corridor 1-10 Cleared
     multiworld.get_entrance("Corridor 21", player).access_rule = \

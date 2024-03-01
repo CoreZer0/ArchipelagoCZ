@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Set, Dict, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 from NetUtils import ClientStatus
 import worlds._bizhawk as bizhawk
 from worlds._bizhawk.client import BizHawkClient
-from .Items import TGLItem, TGLItemData, red_lander_thresholds, balanced_rapid_fire, TGL_ITEMID_BASE
+from .Items import TGLItem, TGLItemData, red_lander_thresholds, TGL_ITEMID_BASE
 from .Locations import TGLLocation, TGLLocationData, TGL_LOCID_BASE, get_locationcode_by_bitflag
 
 if TYPE_CHECKING:
@@ -29,6 +29,8 @@ RAM_LOCATIONS_CHECKED = 0x4A0
 
 # RAM Address for cleared corridor bitmap (1-20 sequence over 3 bytes)
 RAM_CORRIDORS_CLEARED = 0x4A9
+
+RAM_CORRIDORS_OPENED = 0x4B1 # 2 bytes
 
 # RAM Address for Subweapon levels (0-3 levels per weapon, 2 bits per weapon over 3 bytes)
 RAM_SUBWEAPON_LEVELS = 0x4AC
@@ -60,9 +62,12 @@ class TGLClient(BizHawkClient):
     system = "NES"
     patch_suffix = ".aptgl"
 
+    opened_corridors: bool
+
 
     def __init__(self) -> None:
         super().__init__()
+        self.opened_corridors = False
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         from CommonClient import logger
@@ -115,6 +120,7 @@ class TGLClient(BizHawkClient):
             
             # If we're in title screen or demo mode or sound check, skip this loop
             if (check_music_id == 1) or (check_demo_bit == 1) or (check_ending_flag == 0x82):
+                self.opened_corridors = False
                 return
             
             # Check and send game clear - Music code 0F (at 0x3DD)
@@ -124,6 +130,14 @@ class TGLClient(BizHawkClient):
                     "status": ClientStatus.CLIENT_GOAL
                 }])
                 return 
+            
+            # Set the flags to open all Corridors - should reset any time we go to title screen
+            if not self.opened_corridors:
+                await bizhawk.write(
+                    ctx.bizhawk_ctx,
+                    [(RAM_CORRIDORS_OPENED, int(0x03FF).to_bytes(2, 'little'), "RAM")]
+                )
+                self.opened_corridors = True
 
             # Handle giving the player items from the received items list
             # save index of received items array to RAM
@@ -368,16 +382,20 @@ class TGLClient(BizHawkClient):
                         await ctx.send_msgs([{"cmd": "LocationChecks", "locations": [locid]}])
 
             # Corridors 1-20
+            # Send 2 location IDs per corridor, one is a bonus item for game balance 
             for j in range(20):
                 if (corridor_flag_bits & (1 << j)) !=0:
                     locbits = divmod(j, 8)
                     locid = get_locationcode_by_bitflag((locbits[0] + 9, 1 << locbits[1]))
+                    locid_bonus = locid + 1000
+                    checks_out: List[int] = []
                     if locid not in ctx.checked_locations:
                         ctx.locations_checked.add(locid)
-                        ctx.locations_checked.add(locid+1000)
-                        await ctx.send_msgs([{"cmd": "LocationChecks", "locations": [locid, locid+1000]}])
+                        checks_out.append(locid)
+                    if locid_bonus not in ctx.checked_locations:
+                        ctx.locations_checked.add(locid_bonus)
+                        checks_out.append(locid_bonus)
+                        await ctx.send_msgs([{"cmd": "LocationChecks", "locations": checks_out}])
 
         except bizhawk.RequestFailedError:
             pass
-
-

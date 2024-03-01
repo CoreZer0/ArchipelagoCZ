@@ -92,6 +92,12 @@ def generate_output(multiworld: MultiWorld, player: int, output_directory: str, 
                 else:
                     _set_bytes_little_endian(base_patch_rom, location_rom_address, 1, AP_ITEM_CODE)
 
+        # Core changes
+        # Remove the YOU GOT KEY popup in Corridors (TODO: Add to all Corridors, change message)
+        # 0xEA is No-OP, removing the branch to the YOU GOT ITEM subroutine
+        corridor_reward_popup_byte = 0x1F552
+        _set_bytes_little_endian(base_patch_rom, corridor_reward_popup_byte, 2, 0xEAEA)
+
         # Options-based changes
         if options.balanced_rapid_fire:
             rapid_fire_byte = 0x87DE

@@ -34,7 +34,7 @@ class TGLWorld(World):
     web = TGLWebWorld()
     options_dataclass = TGLOptions
     options: TGLOptions
-    topology_present = True # show path to required location checks in spoiler
+    #topology_present = True # show path to required location checks in spoiler
     
     location_name_to_id = {name: data.code for name, data in location_table.items()}
     item_name_to_id = {name: data.code for name, data in item_table.items()}

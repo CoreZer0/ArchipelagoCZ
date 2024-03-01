@@ -2,7 +2,6 @@ from typing import Dict
 
 from . import TGLTestBase
 
-from worlds.guardianlegend.Items import TGLItemData, item_table, get_items_by_category
 from worlds.guardianlegend.Locations import TGLLocationData, location_table, get_locations_by_areanum
 
 # Test that each location per Area has the correct Key lock
