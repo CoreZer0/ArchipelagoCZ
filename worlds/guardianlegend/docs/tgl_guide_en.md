@@ -4,7 +4,7 @@
 
 - The BizHawk emulator. Versions 2.3.1 and higher are supported.
     - [BizHawk at TASVideos](https://tasvideos.org/BizHawk)
-- Your legally acquired US release ROM file.
+- Your legally acquired US release ROM file for The Guardian Legend.
 
 ## Installation Procedures
 
@@ -87,4 +87,7 @@ All other commands may be found on the [Archipelago Server and Client Commands G
 
 ## Known Issues
 
-- In testing.
+- This mod is currently under development, so expect bugs and issues, though most games should be fullt completable without issue.
+- Because some items are always handled by the AP server, randomized TGL games can't be played without a connection to the AP server.
+- There is no save system, and passwords are not supported in conjunction with AP (item handling will be messed up), 
+   so use savestates to save progress when needed. The TGL password is also not supported and will have unexpected effects.

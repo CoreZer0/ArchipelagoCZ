@@ -3,7 +3,7 @@ from typing import List
 from BaseClasses import Region, Tutorial
 from worlds.AutoWorld import WebWorld, World
 from Utils import visualize_regions
-from .Items import TGLItem, TGLItemData, item_table, event_item_table
+from .Items import TGLItem, TGLItemData, item_table, event_item_table, get_item_count
 from .Locations import TGLLocation, location_table, event_location_table
 from .Options import TGLOptions
 from .Regions import create_regions
@@ -50,8 +50,6 @@ class TGLWorld(World):
     def create_regions(self):
         create_regions(self.multiworld, self.player)
         self._place_events()
-        # REMOVE visualizer for PR/dist
-        # visualize_regions(self.multiworld.get_region("Menu", self.player), "TGLRegions.puml")
 
     def _place_events(self):
         # Place "Corridor" items on "Corridor" event locations for Victory condition
@@ -65,12 +63,17 @@ class TGLWorld(World):
     def get_filler_item_name(self) -> str:
         return "Enemy Eraser"
 
-    # If I've counted right, we shouldn't need any filler at all (for now)
     def create_items(self) -> None:
         item_pool: List[TGLItem] = []
         for name, data in item_table.items():
-            quantity = data.max_quantity
-            item_pool += [self.create_item(name) for _ in range(0, quantity)]
+            if self.options.item_distribution.value == 0:
+                # Vanilla item distribution saved in table because of weirdness with counts
+                quantity = data.max_quantity
+                item_pool += [self.create_item(name) for _ in range(0, quantity)]
+            else:
+                # Call helper function to determine item counts
+                quantity = get_item_count(name, self.options.item_distribution.value)
+                item_pool += [self.create_item(name) for _ in range(0, quantity)]
 
         self.multiworld.itempool += item_pool
 

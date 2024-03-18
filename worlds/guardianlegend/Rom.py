@@ -6,7 +6,6 @@ import bsdiff4
 import Utils
 from BaseClasses import MultiWorld
 from worlds.Files import APDeltaPatch
-from settings import get_settings
 from .Items import TGL_ITEMID_BASE, balanced_rapid_fire
 from .Locations import TGL_LOCID_BASE
 from .Options import TGLOptions

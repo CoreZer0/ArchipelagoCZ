@@ -14,14 +14,22 @@ def has_area_key(state: CollectionState, player: int, keyname: str) -> bool:
     return state.has(keyname, player)
 
 def has_enough_defense(state: CollectionState, player: int, threshold: int) -> bool:
-    return state.count("Defense Up", player) >= threshold
+    return min(state.count("Defense Up", player), 6) + state.count("Blue Lander", player) >= threshold
 
+def has_enough_offense(state: CollectionState, player: int, threshold: int) -> bool:
+    # Attack Up counts for double value to increase likelihood it shows up in logic
+    return (min((state.count("Attack Up", player) * 2), 6)
+            + min(state.count("Rapid Fire Up", player), 5) 
+            + state.count("Red Lander", player)) >= threshold
+
+
+''' # # Testing offense/defense split, leaving for reference
 def player_stat_total(state: CollectionState, player: int) -> int:
     return state.count("Defense Up", player) + state.count("Attack Up", player) + state.count("Rapid Fire Up", player)
 
 def player_lander_total(state: CollectionState, player: int) -> int:
     return state.count("Blue Lander", player) + state.count("Red Lander", player)
-
+'''
 
 
 # All shops are named as 'A# <chip_cost> Chip Shop' so we can pull the second word out as an int
@@ -30,15 +38,19 @@ def has_enough_chips(state: CollectionState, player: int, shopname: str) -> bool
     shop_cost = int(shopname.split(' ')[1])
     return get_chip_max(state, player) >= shop_cost
 
+
+''' # Not needed due to corridors always open, leaving for reference
 def has_multibullets(state: CollectionState, player: int) -> bool:
     return state.count("Multibullets", player) >= 1
-
+'''
+    
 def has_final_boss_access(state: CollectionState, player: int) -> bool:
     all_cleared = True
     for i in range(1,11):
         all_cleared &= state.has("Corridor " + str(i) + " Cleared", player)
     return all_cleared
 
+''' # Testing offense/defense split, leaving for reference
 stats_gating_table: Dict[int, List[int]] = {
     0: [1,2,3,3,4,4,5,6,6 ],
     1: [1,2,3,4,5,6,7,8,8 ],
@@ -50,23 +62,45 @@ landers_gating_table: Dict[int, List[int]] = {
     1: [1,2,3,4,6,7,8, 9, 10],
     2: [1,3,5,6,8,9,11,13,14]
 }
+'''
+
+defense_gating_table: Dict[int, List[int]] = {
+    0: [1,2,3,3,4,4,5,6 ,7 ],
+    1: [1,2,3,4,5,6,7,8 ,9 ],
+    2: [1,2,3,4,6,7,9,11,12]
+}
+
+offense_gating_table: Dict[int, List[int]] = {
+    0: [1,2,3,4,5,6 ,7 ,8 ,9 ],
+    1: [1,2,3,4,6,7 ,9 ,11,12],
+    2: [1,3,5,7,9,11,13,15,16]
+}
 
 
 def set_rules(multiworld: MultiWorld, player: int, gating: int):
 
     # Area 1-10 require a specific key, enforced by the game
-    # For balancing, we require a certain number of Defense Up upgrades by certain areas, in-game Max is 6
+    # Additional gating set by options for Area 2 and up
 
     multiworld.get_entrance("Area 1", player).access_rule = \
         lambda state: has_area_key(state, player, "Crescent Key")
 
     for i in range(9):
 
+        # Set the stats required for areas based on options
+        # For vanilla maximums, OffenseMax = 21, DefenseMax = 16 (Attack up counts double)
+
         areaname = "Area " + str(i+2)
 
+        ''' # Testing offense/defense split, leaving for reference
         set_rule(multiworld.get_entrance(areaname, player),
                  lambda state, n=i: (player_stat_total(state, player) >= stats_gating_table[gating][n])
                        and (player_lander_total(state, player) >= landers_gating_table[gating][n]))
+        '''
+        
+        set_rule(multiworld.get_entrance(areaname, player),
+                 lambda state, n=i: (has_enough_defense(state, player, defense_gating_table[gating][n]))
+                       and (has_enough_offense(state, player, offense_gating_table[gating][n])))
     
     add_rule(multiworld.get_entrance("Area 2", player),
             lambda state: has_area_key(state, player, "Crescent Key"))

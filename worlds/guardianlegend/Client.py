@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List, Tuple
 from NetUtils import ClientStatus
 import worlds._bizhawk as bizhawk
 from worlds._bizhawk.client import BizHawkClient
-from .Items import TGLItem, TGLItemData, red_lander_thresholds, TGL_ITEMID_BASE
+from .Items import TGLItem, TGLItemData, red_lander_thresholds, TGL_ITEMID_BASE, get_itemname_by_id
 from .Locations import TGLLocation, TGLLocationData, TGL_LOCID_BASE, get_locationcode_by_bitflag
 
 if TYPE_CHECKING:
@@ -63,11 +63,13 @@ class TGLClient(BizHawkClient):
     patch_suffix = ".aptgl"
 
     opened_corridors: bool
-
+    message_interval_set: bool
+    
 
     def __init__(self) -> None:
         super().__init__()
         self.opened_corridors = False
+        self.message_interval_set = False
 
     async def validate_rom(self, ctx: "BizHawkClientContext") -> bool:
         from CommonClient import logger
@@ -85,7 +87,7 @@ class TGLClient(BizHawkClient):
             # reading as one long number in byte order, so need big-endian in this caw
             rom_valid_num = int.from_bytes(rom_valid_bytes[0], 'big')
             if not rom_valid_num == 0xA00F7017:
-                logger.info("ERROR: This is not a The Guardian Legend ROM file.")
+                logger.info("ERROR: This is not a valid The Guardian Legend ROM file.")
                 return False
         except bizhawk.RequestFailedError:
             return False
@@ -117,6 +119,10 @@ class TGLClient(BizHawkClient):
             check_ending_flag = int.from_bytes(check_safety_bytes[2], 'little')
 
             check_demo_bit = (check_demo_byte & (1 << 7)) >> 7
+
+            if not self.message_interval_set:
+                await bizhawk.set_message_interval(ctx.bizhawk_ctx, 2)
+                self.message_interval_set = True
             
             # If we're in title screen or demo mode or sound check, skip this loop
             if (check_music_id == 1) or (check_demo_bit == 1) or (check_ending_flag == 0x82):
@@ -153,15 +159,21 @@ class TGLClient(BizHawkClient):
             
             if num_new_items < len(ctx.items_received):
                 next_item_id = ctx.items_received[num_new_items].item
+
                 # remote items (including this client's Keys) always get processed
                 is_remote_item = not ctx.slot_concerns_self(ctx.items_received[num_new_items].player)
+
                 # location id < 0 indicates cheat console or server item, we always need to process those
                 # location id in 4000s indicated bonus corridor item that also needs to be handled
                 item_loc = ctx.items_received[num_new_items].location
                 is_special_item = (item_loc < 0) or (item_loc - TGL_LOCID_BASE >= 4000) 
                 next_item_type:Tuple = divmod(next_item_id - TGL_ITEMID_BASE, 1000)
+
                 # Determine how to handle the item based on type:
                 if (next_item_type[0] == 1) and (is_remote_item or is_special_item):
+                    ap_item_message = f"AP: You received your {get_itemname_by_id(next_item_id)}!"
+                    await bizhawk.display_message(ctx.bizhawk_ctx, ap_item_message)
+                    
                     # Drop item
                     # Subweapons are 2 bits per, stored over 3 bytes - need to add 1 level if less than 3 total
                     if next_item_type[1] <= 10:
@@ -319,25 +331,28 @@ class TGLClient(BizHawkClient):
                 # Keys item - we save what keys we think the player should have,
                 # - and write that value over the key bitmap in game
                 elif next_item_type[0] == 2:
-                        if next_item_type[1] < 7:
-                            read_key_data = await bizhawk.read(
-                                ctx.bizhawk_ctx,
-                                [(RAM_KEYS_RECEIVED, 1, "RAM")]
-                            )
-                            add_key_bit = 1 << next_item_type[1]
-                            new_key_flags = int.from_bytes(read_key_data[0], 'little') | add_key_bit
-                            granted_item = await bizhawk.guarded_write(
-                                ctx.bizhawk_ctx,
-                                [
-                                    (RAM_KEYS_RECEIVED, new_key_flags.to_bytes(1, 'little'), "RAM"),
-                                    (RAM_KEYS_INGAME, new_key_flags.to_bytes(1, 'little'), "RAM")
-                                ],
-                                [(RAM_KEYS_RECEIVED, read_key_data[0], "RAM")]
-                            )
-                        else:
-                            raise Exception("Invalid Key flag sent to The Guardian Legend.")
+                    ap_item_message = f"AP: You received your {get_itemname_by_id(next_item_id)}!"
+                    await bizhawk.display_message(ctx.bizhawk_ctx, ap_item_message)
+
+                    if next_item_type[1] < 7:
+                        read_key_data = await bizhawk.read(
+                            ctx.bizhawk_ctx,
+                            [(RAM_KEYS_RECEIVED, 1, "RAM")]
+                        )
+                        add_key_bit = 1 << next_item_type[1]
+                        new_key_flags = int.from_bytes(read_key_data[0], 'little') | add_key_bit
+                        granted_item = await bizhawk.guarded_write(
+                            ctx.bizhawk_ctx,
+                            [
+                                (RAM_KEYS_RECEIVED, new_key_flags.to_bytes(1, 'little'), "RAM"),
+                                (RAM_KEYS_INGAME, new_key_flags.to_bytes(1, 'little'), "RAM")
+                            ],
+                            [(RAM_KEYS_RECEIVED, read_key_data[0], "RAM")]
+                        )
+                    else:
+                        raise Exception("Invalid Key flag sent to The Guardian Legend.")
                 else:
-                        raise Exception("Invalid item type ID sent to The Guardian Legend.")
+                    raise Exception("Invalid item type ID sent to The Guardian Legend.")
                 
             # if we managed to make a successful write, increment the item counter
             if granted_item:

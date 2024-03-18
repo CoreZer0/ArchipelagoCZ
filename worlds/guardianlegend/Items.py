@@ -1,4 +1,4 @@
-from typing import Callable, Dict, NamedTuple, Optional
+from typing import Callable, Dict, List, NamedTuple, Optional
 
 from BaseClasses import Item, ItemClassification, MultiWorld
 
@@ -12,7 +12,6 @@ class TGLItemData(NamedTuple):
     code: Optional[int] = None
     classification: ItemClassification = ItemClassification.filler
     max_quantity: int = 1
-    weight: int = 1
 
 def get_items_by_category(category: str) -> Dict[str, TGLItemData]:
     item_dict: Dict[str, TGLItemData] = {}
@@ -21,6 +20,12 @@ def get_items_by_category(category: str) -> Dict[str, TGLItemData]:
             item_dict.setdefault(name, data)
 
     return item_dict
+
+def get_itemname_by_id(itemid: int) -> str:
+    for name, data in item_table.items():
+        if data.code == itemid:
+            return name
+    
 
 # ID code base 8471760000 = 'TGL' in ASCII decimal + 0000
 TGL_ITEMID_BASE = 8471760000
@@ -41,28 +46,28 @@ item_table: Dict[str, TGLItemData] = {
     "Rectangle Key":  TGLItemData("Keys", TGL_ITEMID_BASE+2006, ItemClassification.progression),
 
     # Subweapons - In-game itemID order, with offsets
-    "Multibullets":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1000, ItemClassification.useful,  4),
-    "Back Fire":      TGLItemData("Subweapons",  TGL_ITEMID_BASE+1001, ItemClassification.useful,  4),
+    "Multibullets":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1000, ItemClassification.useful,  5),
+    "Back Fire":      TGLItemData("Subweapons",  TGL_ITEMID_BASE+1001, ItemClassification.useful,  3),
     "Wave Attack":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1002, ItemClassification.useful,  4),
     "Bullet Shield":  TGLItemData("Subweapons",  TGL_ITEMID_BASE+1003, ItemClassification.useful,  4),
     "Grenade":        TGLItemData("Subweapons",  TGL_ITEMID_BASE+1004, ItemClassification.useful,  4),
     "Fireball":       TGLItemData("Subweapons",  TGL_ITEMID_BASE+1005, ItemClassification.useful,  4),
     "Area Blaster":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1006, ItemClassification.useful,  4),
-    "Repeller":       TGLItemData("Subweapons",  TGL_ITEMID_BASE+1007, ItemClassification.useful,  4),
-    "Hyper Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1008, ItemClassification.useful,  4),
-    "Saber Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1009, ItemClassification.useful,  4),
-    "Cutter Laser":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1010, ItemClassification.useful,  4),
+    "Repeller":       TGLItemData("Subweapons",  TGL_ITEMID_BASE+1007, ItemClassification.useful,  3),
+    "Hyper Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1008, ItemClassification.useful,  3),
+    "Saber Laser":    TGLItemData("Subweapons",  TGL_ITEMID_BASE+1009, ItemClassification.useful,  3),
+    "Cutter Laser":   TGLItemData("Subweapons",  TGL_ITEMID_BASE+1010, ItemClassification.useful,  3),
 
     # Filler / Non-unique
     "Enemy Eraser":  TGLItemData("Filler",  TGL_ITEMID_BASE+1011, ItemClassification.filler,  9),
-    "Energy Pack":   TGLItemData("Filler",  TGL_ITEMID_BASE+1012, ItemClassification.filler,  7),
+    "Energy Pack":   TGLItemData("Filler",  TGL_ITEMID_BASE+1012, ItemClassification.filler,  14),
 
     # Stats
-    "Blue Lander":     TGLItemData("Stats",  TGL_ITEMID_BASE+1013, ItemClassification.progression, 10),
-    "Attack Up":       TGLItemData("Stats",  TGL_ITEMID_BASE+1014, ItemClassification.progression, 4),
+    "Blue Lander":     TGLItemData("Stats",  TGL_ITEMID_BASE+1013, ItemClassification.progression, 9),
+    "Attack Up":       TGLItemData("Stats",  TGL_ITEMID_BASE+1014, ItemClassification.progression, 3),
     "Defense Up":      TGLItemData("Stats",  TGL_ITEMID_BASE+1015, ItemClassification.progression, 9),
     "Rapid Fire Up":   TGLItemData("Stats",  TGL_ITEMID_BASE+1016, ItemClassification.progression, 6),
-    "Red Lander":      TGLItemData("Stats",  TGL_ITEMID_BASE+1017, ItemClassification.progression, 10),
+    "Red Lander":      TGLItemData("Stats",  TGL_ITEMID_BASE+1017, ItemClassification.progression, 9),
 
     # Drops - Not shuffled, here for reference
     #"Life Heart": TGLItemData("Filler",  TGL_ITEMID_BASE+1020, ItemClassification.filler),
@@ -86,5 +91,34 @@ event_item_table: Dict[str, TGLItemData] = {
 
 }
 
+def get_item_count(name: str, distlevel: int) -> int:
+    # Return item count based on item_distribution setting
+    # option_vanilla = 0 - not called here, baked into item_table
+    # option_exact = 1
+    # option_reduced = 2
+    # option_extra = 3
 
+    # NOTE: There are 106 locations to place items, so each "column" here should add to 106
+    #       Other than the first column which is just a reference... 
 
+    item_counts: Dict[str, List[int]] = {
+        "Subweapons":    [3 ,3 ,2 ,4 ],
+
+        "Enemy Eraser":  [9 ,12,10,13],
+        "Energy Pack":   [14,20,41,2 ],
+
+        "Blue Lander":   [9 ,10,7 ,12],
+        "Attack Up":     [3 ,3, 2 ,4 ],
+        "Defense Up":    [9 ,6, 5 ,8 ],
+        "Rapid Fire Up": [6 ,5, 4 ,6 ],
+        "Red Lander":    [9 ,10,8 ,10]
+    }
+
+    if item_table[name].category == "Keys":
+        return 1
+    
+    elif item_table[name].category == "Subweapons":
+        return item_counts["Subweapons"][distlevel]
+    
+    else:
+        return item_counts[name][distlevel]

@@ -30,6 +30,12 @@ belonging to a different world.
 
 ## Are there any other changes made?
 
-- Corridors no longer grant keys, but only the item in the room after clearing.
+- Corridors no longer grant keys and these are shuffled in the item pool. Clearing Corridors will grant 2 item checks.
 - Shops that have 3 items will always show one "good" item and 2 Blue Chips. Because of how shops work in TGL,
   Archipelago will always ensure the unique item is considered checked.
+
+## Special Thanks
+
+- Fireball87 for developing the map and enemy randomizer, which formed the basis of a lot of what's here.
+- TailsMK4 for large amounts of research into RAM and ROM item and text data, and significant playtesting.
+- Facet, Farren Bronaugh, MeowingKitty, Crypt1cmeta4, and others on the AP discord for feedback and playtesting.
